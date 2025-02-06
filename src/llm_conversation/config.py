@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Optional
 
 import ollama
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -10,7 +11,7 @@ def get_available_models() -> list[str]:
 
 
 class AgentConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     name: str = Field(..., min_length=1, description="Name of the AI agent")
     model: str = Field(..., description="Ollama model to be used")
@@ -49,8 +50,9 @@ class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     agent1: AgentConfig = Field(..., description="Configuration for the first AI agent")
-    agent2: AgentConfig = Field(
-        ..., description="Configuration for the second AI agent"
+    agent2: AgentConfig = Field(..., description="Configuration for the second AI agent")
+    agent3: Optional[AgentConfig] = Field(
+        None, description="Configuration for the optional third AI agent"
     )
     settings: ConversationSettings = Field(..., description="Conversation settings")
 

@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, List
 
 from .ai_agent import AIAgent
 
@@ -12,18 +12,19 @@ class ConversationManager:
         agent: str
         content: str
 
-    # TODO: Extend this to support more than two agents.
-    agent1: AIAgent
-    agent2: AIAgent
-    initial_message: str | None
+    agents: List[AIAgent]
+    initial_message: str | None = None
     use_markdown: bool = False
     allow_termination: bool = False
     _conversation_log: list[ConversationLogItem] = field(
         default_factory=list, init=False
     )
+    _current_agent_index: int = field(default=0, init=False)
 
     def __post_init__(self):
-        # Modify system prompt to include termination instructions if allowed
+        if len(self.agents) < 2:
+            raise ValueError("At least two agents must be provided")
+
         instruction: str = ""
 
         if self.use_markdown:
@@ -32,8 +33,6 @@ class ConversationManager:
                 "Examples: *italic*, **bold**, `code`, [link](https://example.com), etc."
             )
 
-        # TODO: Make the <TERMINATE> token prompt stronger. Right now the agent often confuses it or forgets about it
-        # and can't use it properly.
         if self.allow_termination:
             instruction += (
                 "\n\nYou may terminate the conversation with the `<TERMINATE>` token "
@@ -41,55 +40,45 @@ class ConversationManager:
                 "Do not include the token in your message otherwise."
             )
 
-        self.agent1.system_prompt += instruction
-        self.agent2.system_prompt += instruction
+        # Add instructions to all agents
+        for agent in self.agents:
+            agent.system_prompt += instruction
 
-    # TODO: Support JSON output.
     def save_conversation(self, filename: Path):
         with open(filename, "w", encoding="utf-8") as f:
-            _ = f.write(f"=== Agent 1 ===\n\n")
-            _ = f.write(f"Name: {self.agent1.name}\n")
-            _ = f.write(f"Model: {self.agent1.model}\n")
-            _ = f.write(f"Temperature: {self.agent1.temperature}\n")
-            _ = f.write(f"Context Size: {self.agent1.ctx_size}\n")
-            _ = f.write(f"System Prompt: {self.agent1.system_prompt}\n\n")
-            _ = f.write(f"=== Agent 2 ===\n\n")
-            _ = f.write(f"Name: {self.agent2.name}\n")
-            _ = f.write(f"Model: {self.agent2.model}\n")
-            _ = f.write(f"Temperature: {self.agent2.temperature}\n")
-            _ = f.write(f"Context Size: {self.agent2.ctx_size}\n")
-            _ = f.write(f"System Prompt: {self.agent2.system_prompt}\n\n")
-            _ = f.write(f"=== Conversation ===\n\n")
+            # Write agent configurations
+            for i, agent in enumerate(self.agents, 1):
+                _ = f.write(f"=== Agent {i} ===\n\n")
+                _ = f.write(f"Name: {agent.name}\n")
+                _ = f.write(f"Model: {agent.model}\n")
+                _ = f.write(f"Temperature: {agent.temperature}\n")
+                _ = f.write(f"Context Size: {agent.ctx_size}\n")
+                _ = f.write(f"System Prompt: {agent.system_prompt}\n\n")
 
+            # Write conversation
+            _ = f.write(f"=== Conversation ===\n\n")
             for i, msg in enumerate(self._conversation_log):
                 if i > 0:
                     _ = f.write("\n" + "\u2500" * 80 + "\n\n")
-
                 _ = f.write(f"{msg['agent']}: {msg['content']}\n")
 
     def run_conversation(self) -> Iterator[tuple[str, Iterator[str]]]:
-        """
-        Generate an iterator of conversation responses.
-
-        Yields:
-            Iterator of (agent_name, message) tuples or None
-        """
+        """Generate an iterator of conversation responses."""
 
         last_message = self.initial_message
-        is_agent1_turn = True
 
-        # If a non-empty initial message is provided, start with it.
+        # Handle initial message if provided
         if self.initial_message is not None:
-            # Make the first agent the one to say the initial message, and the second agent the one to respond.
-            self.agent1.add_message("assistant", self.initial_message)
+            first_agent = self.agents[0]
+            first_agent.add_message("assistant", self.initial_message)
             self._conversation_log.append(
-                {"agent": self.agent1.name, "content": self.initial_message}
+                {"agent": first_agent.name, "content": self.initial_message}
             )
-            yield (self.agent1.name, iter([self.initial_message]))
-            is_agent1_turn = False
+            yield (first_agent.name, iter([self.initial_message]))
+            self._current_agent_index = 1  # Next agent will be index 1
 
         while True:
-            current_agent = self.agent1 if is_agent1_turn else self.agent2
+            current_agent = self.agents[self._current_agent_index]
             response_stream = current_agent.chat(last_message)
             last_message_chunks: list[str] = []
 
@@ -100,7 +89,6 @@ class ConversationManager:
 
             yield (current_agent.name, stream_chunks())
 
-            # stream_chunks must be exhausted before this function is called again.
             assert next(response_stream, None) is None
 
             last_message = "".join(last_message_chunks).strip()
@@ -108,9 +96,8 @@ class ConversationManager:
                 {"agent": current_agent.name, "content": last_message}
             )
 
-            # Check for termination token.
-            # TODO: Filter out the `<TERMINATE>` token from the output to prevent it from displaying.
             if self.allow_termination and "<TERMINATE>" in last_message:
                 break
 
-            is_agent1_turn = not is_agent1_turn
+            # Move to next agent in rotation
+            self._current_agent_index = (self._current_agent_index + 1) % len(self.agents)

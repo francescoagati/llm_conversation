@@ -149,14 +149,38 @@ def main():
     console = Console()
     console.clear()
 
-    console = Console()
-    console.clear()
-
     if args.config:
         # Load from config file
         config = load_config(args.config)
-        agent1 = create_ai_agent_from_config(config.agent1)
-        agent2 = create_ai_agent_from_config(config.agent2)
+        agent1 = AIAgent(
+            name=config.agent1.name,
+            model=config.agent1.model,
+            temperature=config.agent1.temperature,
+            ctx_size=config.agent1.ctx_size,
+            system_prompt=config.agent1.system_prompt,
+        )
+
+        agent2 = AIAgent(
+            name=config.agent2.name,
+            model=config.agent2.model,
+            temperature=config.agent2.temperature,
+            ctx_size=config.agent2.ctx_size,
+            system_prompt=config.agent2.system_prompt,
+        )
+
+        agents = [agent1, agent2]
+
+        # Add optional third agent if configured
+        if config.agent3:
+            agent3 = AIAgent(
+                name=config.agent3.name,
+                model=config.agent3.model,
+                temperature=config.agent3.temperature,
+                ctx_size=config.agent3.ctx_size,
+                system_prompt=config.agent3.system_prompt,
+            )
+            agents.append(agent3)
+
         settings = config.settings
         use_markdown = settings.use_markdown or False
         allow_termination = settings.allow_termination or False
@@ -166,6 +190,8 @@ def main():
         console.clear()
         agent2 = create_ai_agent_from_input(console, 2)
         console.clear()
+
+        agents = [agent1, agent2]
 
         use_markdown = prompt_bool(
             "Use Markdown for text formatting? (y/N): ", default=False
@@ -178,8 +204,7 @@ def main():
         console.clear()
 
     manager = ConversationManager(
-        agent1=agent1,
-        agent2=agent2,
+        agents=agents,
         initial_message=initial_message,
         use_markdown=use_markdown,
         allow_termination=allow_termination,

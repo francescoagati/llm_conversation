@@ -65,6 +65,13 @@ Alternatively, you can provide a JSON configuration file with the following stru
         "temperature": 0.7,
         "ctx_size": 2048
     },
+    "agent3": {
+        "name": "Helpful Assistant",
+        "model": "llama3.3:5b",
+        "system_prompt": "You are a helpful assistant who provides detailed and informative responses.",
+        "temperature": 0.5,
+        "ctx_size": 3072
+    },
     "settings": {
         "allow_termination": false,
         "use_markdown": true,
@@ -101,7 +108,7 @@ You can take a look at the [JSON configuration schema](schema.json) for more det
 ## Output Format
 
 When saving conversations, the output file includes:
-- Configuration details for both agents
+- Configuration details for all agents
 - Complete conversation history with agent names and messages
 
 ## Contributing

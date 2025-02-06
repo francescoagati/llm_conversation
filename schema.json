@@ -86,6 +86,10 @@
             "$ref": "#/$defs/AgentConfig",
             "description": "Configuration for the second AI agent"
         },
+        "agent3": {
+            "$ref": "#/$defs/AgentConfig",
+            "description": "Configuration for the third AI agent (optional)"
+        },
         "settings": {
             "$ref": "#/$defs/ConversationSettings",
             "description": "Conversation settings"
