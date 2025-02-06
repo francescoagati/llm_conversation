@@ -1,0 +1,46 @@
+# Configuration schema for AI conversation agents
+agents:
+  type: array
+  minItems: 2
+  description: Array of AI agent configurations
+  items:
+    type: object
+    required: [name, model, system_prompt]
+    properties:
+      name:
+        type: string
+        description: Name of the AI agent
+      model:
+        type: string
+        description: Ollama model to be used
+      system_prompt:
+        type: string
+        description: Initial system prompt for the agent
+      temperature:
+        type: number
+        description: Sampling temperature (0.0-1.0)
+        default: 0.8
+        minimum: 0.0
+        maximum: 1.0
+      ctx_size:
+        type: integer
+        description: Context size for the model
+        default: 2048
+        minimum: 0
+
+settings:
+  type: object
+  properties:
+    use_markdown:
+      type: boolean
+      description: Enable Markdown formatting
+      default: false
+    allow_termination:
+      type: boolean
+      description: Allow AI agents to terminate the conversation
+      default: false
+    initial_message:
+      type: string
+      description: Initial message to start the conversation
+      nullable: true
+      default: null

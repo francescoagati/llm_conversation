@@ -1,4 +1,5 @@
 import json
+import yaml
 from pathlib import Path
 from typing import Optional
 
@@ -58,7 +59,7 @@ def load_config(config_path: Path) -> Config:
     Load and validate the configuration file using Pydantic.
 
     Args:
-        config_path (Path): Path to the JSON configuration file
+        config_path (Path): Path to the JSON or YAML configuration file
 
     Returns:
         Config: Validated configuration object
@@ -66,13 +67,19 @@ def load_config(config_path: Path) -> Config:
     Raises:
         ValueError: If the configuration is invalid
     """
-    try:
-        with open(config_path, "r") as f:
-            config_dict = json.load(f)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in config file: {e}")
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    content = config_path.read_text()
+    
+    if config_path.suffix.lower() in ['.yaml', '.yml']:
+        data = yaml.safe_load(content)
+    elif config_path.suffix.lower() == '.json':
+        data = json.loads(content)
+    else:
+        raise ValueError("Config file must be either JSON or YAML format")
 
     try:
-        return Config.model_validate(config_dict)
+        return Config.model_validate(data)
     except Exception as e:
         raise ValueError(f"Configuration validation failed: {e}")

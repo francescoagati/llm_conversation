@@ -139,7 +139,7 @@ def main():
         "-o", "--output", type=Path, help="Path to save the conversation log to"
     )
     _ = parser.add_argument(
-        "-c", "--config", type=Path, help="Path to JSON configuration file"
+        "-c", "--config", type=Path, help="Path to JSON or YAML configuration file"
     )
     args = parser.parse_args()
 
@@ -150,6 +150,10 @@ def main():
     console.clear()
 
     if args.config:
+        if not args.config.suffix.lower() in ['.json', '.yaml', '.yml']:
+            console.print("Config file must be either JSON or YAML format", style="bold red")
+            return
+
         # Load from config file
         config = load_config(args.config)
         agents = [
