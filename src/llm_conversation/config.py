@@ -49,11 +49,7 @@ class ConversationSettings(BaseModel):
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    agent1: AgentConfig = Field(..., description="Configuration for the first AI agent")
-    agent2: AgentConfig = Field(..., description="Configuration for the second AI agent")
-    agent3: Optional[AgentConfig] = Field(
-        None, description="Configuration for the optional third AI agent"
-    )
+    agents: list[AgentConfig] = Field(..., min_items=2, description="Array of AI agent configurations")
     settings: ConversationSettings = Field(..., description="Conversation settings")
 
 
